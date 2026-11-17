@@ -174,8 +174,13 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 const inputs = readdirSync(INPUT_DIR).filter((f) => f.endsWith('.in')).sort();
 for (const file of inputs) {
   const id = file.slice(0, -'.in'.length);
+  // Hour 1's print, recovered before any failure can hide it: the fallback
+  // below centres on it instead of on 1 viewer (the old fallback forgot p1).
+  let p1 = 1;
   try {
     const c = JSON.parse(readFileSync(join(INPUT_DIR, file), 'utf8')) as CaseFile;
+    const first = c.known.find((k) => k.hour === 1);
+    p1 = Math.max(1, first?.viewers ?? 1);
     if (c.levels.length !== LEVELS.length || c.levels.some((t, j) => t !== LEVELS[j])) {
       throw new Error(`${file} asks for levels ${JSON.stringify(c.levels)}`);
     }
@@ -185,7 +190,7 @@ for (const file of inputs) {
     const fallback = {
       hours: Array.from({ length: 23 }, (_, i) => {
         const h = i + 2;
-        return { hour: h, q: Z.map((z) => round2(Math.max(1, Math.exp(z * BASE_SIGMA * Math.sqrt(h - 1))))) };
+        return { hour: h, q: Z.map((z) => round2(Math.max(1, p1 * Math.exp(z * BASE_SIGMA * Math.sqrt(h - 1))))) };
       }),
     };
     writeFileSync(join(OUTPUT_DIR, `${id}.out`), `${JSON.stringify(fallback)}\n`);
